@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galactic Holocron: キャラクター当てクイズ</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Orbitron & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --sw-yellow: #FFE81F;
+            --sw-cyan: #2de2e6;
+            --sw-red: #ff3344;
+            --sw-green: #2ecc71;
+            --space-bg: #07090e;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--space-bg);
+            color: #e2e8f0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', monospace;
+            letter-spacing: 0.05em;
+        }
+
+        /* Starfield background */
+        .stars-bg {
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 40px 70px, #93c5fd, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 90px 40px, #fef08a, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 160px 120px, #ffffff, rgba(0,0,0,0));
+            background-repeat: repeat;
+            background-size: 200px 200px;
+        }
+
+        /* Sci-Fi Glows */
+        .glow-yellow {
+            text-shadow: 0 0 12px rgba(255, 232, 31, 0.65), 0 0 25px rgba(255, 232, 31, 0.35);
+        }
+        .glow-cyan {
+            text-shadow: 0 0 10px rgba(45, 226, 230, 0.6);
+        }
+
+        /* Futuristic HUD Corner Cut */
+        .hud-panel {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 232, 31, 0.25);
+            clip-path: polygon(0 14px, 14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px));
+        }
+
+        /* Choice button styling */
+        .choice-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .choice-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(45, 226, 230, 0.4);
+            border-color: var(--sw-cyan);
+            background-color: rgba(45, 226, 230, 0.15);
+        }
+        .btn-correct {
+            background-color: rgba(46, 204, 113, 0.3) !important;
+            border-color: #2ecc71 !important;
+            box-shadow: 0 0 20px rgba(46, 204, 113, 0.6) !important;
+            color: #a7f3d0 !important;
+        }
+        .btn-wrong {
+            background-color: rgba(255, 51, 68, 0.3) !important;
+            border-color: #ff3344 !important;
+            box-shadow: 0 0 20px rgba(255, 51, 68, 0.6) !important;
+            color: #fecaca !important;
+        }
+
+        /* Scanline effect */
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(1000%); }
+        }
+        .scanline {
+            animation: scan 4s linear infinite;
+        }
+    </style>
+</head>
+<body class="stars-bg flex flex-col items-center justify-between min-h-screen p-4 sm:p-6 select-none">
+
+    <header class="w-full max-w-2xl flex items-center justify-between py-2 border-b border-yellow-500/20 mb-4">
+        <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-jedi text-yellow-400 text-2xl"></i>
+            <span class="font-orbitron text-xl font-bold tracking-wider text-yellow-400 glow-yellow">HOLOCRON</span>
+        </div>
+        <div id="header-difficulty-badge" class="hidden text-xs font-orbitron px-3 py-1 rounded-full uppercase tracking-wider font-semibold">
+        </div>
+    </header>
+
+    <main class="w-full max-w-xl flex-grow flex items-center justify-center">
+        <!-- Title Screen -->
+        <section id="screen-title" class="hud-panel p-6 sm:p-10 w-full text-center space-y-8 shadow-2xl">
+            <div class="space-y-3">
+                <span class="text-xs uppercase font-orbitron text-cyan-400 tracking-widest block glow-cyan">Identification Protocol</span>
+                <h1 class="text-3xl sm:text-4xl font-extrabold font-orbitron text-yellow-400 glow-yellow tracking-wide">
+                    STAR WARS
+                </h1>
+                <p class="text-gray-300 text-sm sm:text-base font-medium">キャラクター名前当てクイズ</p>
+                <div class="w-20 h-1 bg-yellow-400/40 mx-auto rounded-full"></div>
+            </div>
+
+            <!-- Difficulty Selector -->
+            <div class="space-y-3 text-left">
+                <label class="text-xs font-orbitron text-gray-400 uppercase tracking-widest block">
+                    <i class="fa-solid fa-gauge-high mr-1 text-cyan-400"></i> 難易度を選択
+                </label>
+                <div class="grid grid-cols-3 gap-2.5">
+                    <button type="button" onclick="selectDifficulty('easy')" id="diff-btn-easy"
+                        class="p-3.5 rounded-lg border border-cyan-500/50 bg-slate-800/80 hover:bg-cyan-950/40 text-center transition flex flex-col items-center gap-1 focus:outline-none ring-2 ring-yellow-400 bg-slate-700/80">
+                        <span class="text-sm font-bold text-cyan-300">かんたん</span>
+                        <span class="text-[10px] text-gray-400 font-orbitron">EASY</span>
+                    </button>
+                    <button type="button" onclick="selectDifficulty('normal')" id="diff-btn-normal"
+                        class="p-3.5 rounded-lg border border-yellow-500/50 bg-slate-800/80 hover:bg-yellow-950/40 text-center transition flex flex-col items-center gap-1 focus:outline-none">
+                        <span class="text-sm font-bold text-yellow-300">ふつう</span>
+                        <span class="text-[10px] text-gray-400 font-orbitron">NORMAL</span>
+                    </button>
+                    <button type="button" onclick="selectDifficulty('hard')" id="diff-btn-hard"
+                        class="p-3.5 rounded-lg border border-red-500/50 bg-slate-800/80 hover:bg-red-950/40 text-center transition flex flex-col items-center gap-1 focus:outline-none">
+                        <span class="text-sm font-bold text-red-400">むずかしい</span>
+                        <span class="text-[10px] text-gray-400 font-orbitron">HARD</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Start Button -->
+            <button onclick="startQuiz()" class="w-full py-4 rounded-xl font-orbitron font-bold text-lg text-black bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 hover:from-yellow-300 hover:to-yellow-400 transition transform hover:scale-[1.02] active:scale-95 shadow-lg shadow-yellow-500/30 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-play text-sm"></i> ミッション開始
+            </button>
+        </section>
+
+        <!-- Quiz Screen -->
+        <section id="screen-quiz" class="hidden hud-panel p-5 sm:p-7 w-full flex flex-col items-center space-y-5 shadow-2xl relative overflow-hidden">
+            <!-- Top Progress Bar -->
+            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div id="quiz-progress-bar" class="bg-gradient-to-r from-yellow-400 to-cyan-400 h-full w-0 transition-all duration-300"></div>
+            </div>
+
+            <!-- Quiz Status Bar -->
+            <div class="w-full flex justify-between items-center text-sm">
+                <div class="flex items-center gap-2 font-orbitron text-gray-300">
+                    <span class="text-xs text-gray-400">TARGET:</span>
+                    <span id="current-q-index" class="text-yellow-400 font-bold text-lg">1</span>
+                    <span class="text-xs text-gray-500">/</span>
+                    <span id="total-q-count" class="text-gray-400">10</span>
+                </div>
+                <div class="flex items-center gap-2 font-orbitron">
+                    <span class="text-xs text-gray-400">SCORE:</span>
+                    <span id="current-score" class="text-cyan-400 font-bold text-lg glow-cyan">0</span>
+                </div>
+            </div>
+
+            <!-- 16:9比率 Holo Frame -->
+            <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-slate-950 border-2 border-cyan-500/40 flex items-center justify-center shadow-inner group">
+                <div class="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/5 to-transparent h-12 w-full scanline pointer-events-none"></div>
+
+                <img id="character-image" 
+                     src="" 
+                     alt="Character Target"
+                     class="w-full h-full object-cover transition duration-300 select-none"
+                     onerror="handleImageError(this)">
+
+                <!-- Hologram Corner Accents -->
+                <div class="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-cyan-400"></div>
+                <div class="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-cyan-400"></div>
+                <div class="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-cyan-400"></div>
+                <div class="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-cyan-400"></div>
+
+                <!-- Fallback overlay if image not found -->
+                <div id="image-fallback-badge" class="hidden absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center p-4 text-center">
+                    <i class="fa-solid fa-user-astronaut text-4xl text-cyan-400 mb-2"></i>
+                    <p class="text-xs text-gray-300">[ HOLOCRON DATA ENCRYPTED ]</p>
+                    <span id="fallback-target-name" class="text-[11px] text-yellow-400 mt-1">画像ファイルが見つかりません</span>
+                </div>
+            </div>
+
+            <!-- Choices Grid -->
+            <div id="choices-container" class="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1"></div>
+
+            <!-- Feedback Message Banner -->
+            <div id="feedback-banner" class="w-full min-h-[38px] flex items-center justify-center text-sm font-bold opacity-0 transition-opacity duration-200"></div>
+        </section>
+
+        <!-- Result Screen -->
+        <section id="screen-result" class="hidden hud-panel p-6 sm:p-10 w-full text-center space-y-6 shadow-2xl">
+            <div class="space-y-2">
+                <span class="text-xs uppercase font-orbitron text-gray-400 tracking-widest block">Mission Debriefing</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold font-orbitron text-yellow-400 glow-yellow">
+                    リザルト
+                </h2>
+            </div>
+
+            <div class="bg-slate-900/90 border border-yellow-500/30 rounded-2xl p-6 space-y-4">
+                <div class="w-20 h-20 rounded-full mx-auto flex items-center justify-center text-3xl bg-slate-800 border-2" id="rank-icon-box">
+                    <i id="rank-icon" class="fa-solid fa-award text-yellow-400"></i>
+                </div>
+                <div>
+                    <span class="text-xs uppercase font-orbitron text-gray-400">称号 / RANK</span>
+                    <h3 id="rank-title" class="text-2xl font-bold font-orbitron text-cyan-300 glow-cyan mt-1">ジェダイ・ナイト</h3>
+                    <p id="rank-desc" class="text-xs text-gray-300 mt-2 px-2"></p>
+                </div>
+                <div class="grid grid-cols-2 gap-4 pt-3 border-t border-slate-800">
+                    <div class="text-center">
+                        <span class="text-[11px] text-gray-400 block font-orbitron">スコア</span>
+                        <span id="result-score" class="text-2xl font-bold font-orbitron text-yellow-400">0 / 10</span>
+                    </div>
+                    <div class="text-center">
+                        <span class="text-[11px] text-gray-400 block font-orbitron">正解率</span>
+                        <span id="result-accuracy" class="text-2xl font-bold font-orbitron text-cyan-400">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                <button onclick="restartQuiz()" class="flex-1 py-3.5 rounded-xl font-orbitron font-bold text-sm text-black bg-yellow-400 hover:bg-yellow-300 transition shadow-lg shadow-yellow-500/20 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> 同じ難易度で再挑戦
+                </button>
+                <button onclick="backToTitle()" class="flex-1 py-3.5 rounded-xl font-orbitron font-bold text-sm text-gray-300 border border-slate-700 bg-slate-800/80 hover:bg-slate-700 hover:text-white transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-list"></i> タイトルに戻る
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <footer class="w-full text-center py-4 text-xs text-gray-600 font-orbitron">
+        Star Wars Character Holo-Guess &bull; Fan Project
+    </footer>
+
+    <script>
+    /* =========================================================================
+       ▼ キャラクター データベース（全100名）
+       ========================================================================= */
+    const QUIZ_DATABASE = {
+        // 【かんたん】30名
+        easy: [
+            { name: "ダース・ベイダー",             image: "images/001_vader.jpeg" },
+            { name: "ルーク・スカイウォーカー",       image: "images/002_luke.jpeg" },
+            { name: "レイア・オーガナ",             image: "images/003_leia.jpeg" },
+            { name: "ハン・ソロ",                   image: "images/004_hansolo.jpeg" },
+            { name: "チューバッカ",                 image: "images/005_chewbacca.jpeg" },
+            { name: "ヨーダ",                       image: "images/006_yoda.jpeg" },
+            { name: "オビ＝ワン・ケノービ",         image: "images/007_obiwan.jpeg" },
+            { name: "R2-D2",                       image: "images/008_r2d2.jpeg" },
+            { name: "C-3PO",                       image: "images/009_c3po.jpeg" },
+            { name: "アナキン・スカイウォーカー",   image: "images/010_anakin.jpeg" },
+            { name: "パドメ・アミダラ",             image: "images/011_padme.jpeg" },
+            { name: "パルパティーン皇帝",           image: "images/012_palpatine.jpeg" },
+            { name: "ダース・モール",               image: "images/013_maul.jpeg" },
+            { name: "ボバ・フェット",               image: "images/014_bobafett.jpeg" },
+            { name: "ストームトルーパー",           image: "images/015_stormtrooper.jpeg" },
+            { name: "メイス・ウィンドゥ",           image: "images/016_macewindu.jpeg" },
+            { name: "クワイ＝ガン・ジン",           image: "images/017_quigon.jpeg" },
+            { name: "ドゥークー伯爵",               image: "images/018_dooku.jpeg" },
+            { name: "グリーヴァス将軍",             image: "images/019_grievous.jpeg" },
+            { name: "ランド・カルリジアン",         image: "images/020_lando.jpeg" },
+            { name: "ジャバ・ザ・ハット",           image: "images/021_jabba.jpeg" },
+            { name: "レイ",                         image: "images/022_rey.jpeg" },
+            { name: "カイロ・レン",                 image: "images/023_kyloren.jpeg" },
+            { name: "フィン",                       image: "images/024_finn.jpeg" },
+            { name: "ポー・ダメロン",               image: "images/025_poe.jpeg" },
+            { name: "BB-8",                        image: "images/026_bb8.jpeg" },
+            { name: "ディン・ジャリン (マンドー)",  image: "images/027_mando.jpeg" },
+            { name: "グローグー",                   image: "images/028_grogu.jpeg" },
+            { name: "アソーカ・タノ",               image: "images/029_ahsoka.jpeg" },
+            { name: "ジャンゴ・フェット",           image: "images/030_jangofett.jpeg" }
+        ],
+
+        // 【ふつう】40名
+        normal: [
+            { name: "キャプテン・レックス",         image: "images/031_rex.jpeg" },
+            { name: "コマンダー・コーディ",         image: "images/032_cody.jpeg" },
+            { name: "キット・フィストー",           image: "images/033_kitfisto.jpeg" },
+            { name: "プロ・クーン",                 image: "images/034_plokoon.jpeg" },
+            { name: "シャアク・ティ",               image: "images/035_shaakti.jpeg" },
+            { name: "アイラ・セキュラ",             image: "images/036_aayla.jpeg" },
+            { name: "キ＝アディ＝ムンディ",         image: "images/037_kiadimundi.jpeg" },
+            { name: "ルミナーラ・アンドゥリ",       image: "images/038_luminara.jpeg" },
+            { name: "バリス・オフィー",             image: "images/039_barriss.jpeg" },
+            { name: "アサージ・ヴェントレス",       image: "images/040_ventress.jpeg" },
+            { name: "サヴァージ・オプレス",         image: "images/041_savage.jpeg" },
+            { name: "キャド・ベイン",               image: "images/042_cadbane.jpeg" },
+            { name: "ボ＝カターン・クライズ",       image: "images/043_bokatan.jpeg" },
+            { name: "サビーヌ・レン",               image: "images/044_sabine.jpeg" },
+            { name: "ヘラ・シンドゥーラ",           image: "images/045_hera.jpeg" },
+            { name: "ケイナン・ジャラス",           image: "images/046_kanan.jpeg" },
+            { name: "エズラ・ブリッジャー",         image: "images/047_ezra.jpeg" },
+            { name: "ガラゼブ・オレリオス (ゼブ)",   image: "images/048_zeb.jpeg" },
+            { name: "チョッパー (C1-10P)",          image: "images/049_chopper.jpeg" },
+            { name: "スローン大提督",               image: "images/050_thrawn.jpeg" },
+            { name: "キャシアン・アンドー",         image: "images/051_cassian.jpeg" },
+            { name: "ジン・アーソ",                 image: "images/052_jynerso.jpeg" },
+            { name: "K-2SO",                       image: "images/053_k2so.jpeg" },
+            { name: "チアルート・イムウェ",         image: "images/054_chirrut.jpeg" },
+            { name: "ベイズ・マルバス",             image: "images/055_baze.jpeg" },
+            { name: "オーソン・クレニック長官",     image: "images/056_krennic.jpeg" },
+            { name: "ターキン総督",                 image: "images/057_tarkin.jpeg" },
+            { name: "モフ・ギデオン",               image: "images/058_gideon.jpeg" },
+            { name: "グリーフ・カルガ",             image: "images/059_karga.jpeg" },
+            { name: "クイール",                     image: "images/060_kuiil.jpeg" },
+            { name: "IG-11",                       image: "images/061_ig11.jpeg" },
+            { name: "コブ・ヴァンス",               image: "images/062_cobbvanth.jpeg" },
+            { name: "フェネック・シャンド",         image: "images/063_fennec.jpeg" },
+            { name: "ハンター (バッド・バッチ)",    image: "images/064_hunter.jpeg" },
+            { name: "クロスヘア",                   image: "images/065_crosshair.jpeg" },
+            { name: "レッカー",                     image: "images/066_wrecker.jpeg" },
+            { name: "テック",                       image: "images/067_tech.jpeg" },
+            { name: "エコー",                       image: "images/068_echo.jpeg" },
+            { name: "オメガ",                       image: "images/069_omega.jpeg" },
+            { name: "最高指導者スノーク",           image: "images/070_snoke.jpeg" }
+        ],
+
+        // 【むずかしい】30名
+        hard: [
+            { name: "ボスク",                       image: "images/071_bossk.jpeg" },
+            { name: "デンガー",                     image: "images/072_dengar.jpeg" },
+            { name: "IG-88",                       image: "images/073_ig88.jpeg" },
+            { name: "4-LOM",                       image: "images/074_4lom.jpeg" },
+            { name: "ザッカス",                     image: "images/075_zuckuss.jpeg" },
+            { name: "オーラ・シング",               image: "images/076_aurrasing.jpeg" },
+            { name: "エンボ",                       image: "images/077_embo.jpeg" },
+            { name: "ピエット提督",                 image: "images/078_piett.jpeg" },
+            { name: "ヴィアーズ将軍",               image: "images/079_veers.jpeg" },
+            { name: "モン・モスマ",                 image: "images/080_monmothma.jpeg" },
+            { name: "アクバー提督",                 image: "images/081_ackbar.jpeg" },
+            { name: "ナイン・ナン",                 image: "images/082_niennunb.jpeg" },
+            { name: "ウェッジ・アンティリーズ",     image: "images/083_wedge.jpeg" },
+            { name: "ビブ・フォーチュナ",           image: "images/084_bibfortuna.jpeg" },
+            { name: "サレシャス・クラム",           image: "images/085_salacious.jpeg" },
+            { name: "マックス・レボ",               image: "images/086_maxrebo.jpeg" },
+            { name: "フィグリン・ダン",             image: "images/087_figrindan.jpeg" },
+            { name: "ボス・ナス",                   image: "images/088_bossnass.jpeg" },
+            { name: "ワトー",                       image: "images/089_watto.jpeg" },
+            { name: "セブルバ",                     image: "images/090_sebulba.jpeg" },
+            { name: "デクスター・ジェッスター",     image: "images/091_dexter.jpeg" },
+            { name: "ヤドル",                       image: "images/092_yaddle.jpeg" },
+            { name: "サイフォ＝ディアス",           image: "images/093_sifo-dyas.jpeg" },
+            { name: "キーラ",                       image: "images/094_qi-ra.jpeg" },
+            { name: "ドライデン・ヴォス",           image: "images/095_drydenvos.jpeg" },
+            { name: "トビアス・ベケット",           image: "images/096_beckett.jpeg" },
+            { name: "ルーセン・レイエル",           image: "images/097_luthen.jpeg" },
+            { name: "デドラ・ミーロ",               image: "images/098_dedra.jpeg" },
+            { name: "ベイラン・スコール",           image: "images/099_baylanskoll.jpeg" },
+            { name: "シン・ハティ",                 image: "images/100_shinhati.jpeg" }
+        ]
+    };
+
+    const QUESTIONS_PER_GAME = 10;
+    let currentDifficulty = 'easy';
+    let currentPool = [];
+    let currentQuestions = [];
+    let currentIndex = 0;
+    let score = 0;
+    let isAnswerLocked = false;
+
+    function selectDifficulty(diff) {
+        currentDifficulty = diff;
+        const diffs = ['easy', 'normal', 'hard'];
+        diffs.forEach(d => {
+            const btn = document.getElementById(`diff-btn-${d}`);
+            if (d === diff) {
+                btn.classList.add('ring-2', 'ring-yellow-400', 'bg-slate-700/80');
+            } else {
+                btn.classList.remove('ring-2', 'ring-yellow-400', 'bg-slate-700/80');
+            }
+        });
+    }
+
+    function startQuiz() {
+        currentPool = QUIZ_DATABASE[currentDifficulty];
+        currentQuestions = shuffleArray(currentPool).slice(0, Math.min(QUESTIONS_PER_GAME, currentPool.length));
+        currentIndex = 0;
+        score = 0;
+
+        document.getElementById('screen-title').classList.add('hidden');
+        document.getElementById('screen-result').classList.add('hidden');
+        document.getElementById('screen-quiz').classList.remove('hidden');
+
+        updateHeaderBadge();
+        loadQuestion();
+    }
+
+    function updateHeaderBadge() {
+        const badge = document.getElementById('header-difficulty-badge');
+        badge.classList.remove('hidden', 'bg-cyan-900/60', 'text-cyan-300', 'border-cyan-500', 'bg-yellow-900/60', 'text-yellow-300', 'border-yellow-500', 'bg-red-900/60', 'text-red-300', 'border-red-500');
+        badge.classList.add('border');
+
+        if (currentDifficulty === 'easy') {
+            badge.innerText = 'EASY (かんたん)';
+            badge.classList.add('bg-cyan-900/60', 'text-cyan-300', 'border-cyan-500');
+        } else if (currentDifficulty === 'normal') {
+            badge.innerText = 'NORMAL (ふつう)';
+            badge.classList.add('bg-yellow-900/60', 'text-yellow-300', 'border-yellow-500');
+        } else {
+            badge.innerText = 'HARD (むずかしい)';
+            badge.classList.add('bg-red-900/60', 'text-red-300', 'border-red-500');
+        }
+    }
+
+    function loadQuestion() {
+        isAnswerLocked = false;
+        const currentItem = currentQuestions[currentIndex];
+
+        document.getElementById('current-q-index').innerText = currentIndex + 1;
+        document.getElementById('total-q-count').innerText = currentQuestions.length;
+        document.getElementById('current-score').innerText = score;
+
+        const progressPercent = ((currentIndex) / currentQuestions.length) * 100;
+        document.getElementById('quiz-progress-bar').style.width = `${progressPercent}%`;
+
+        const banner = document.getElementById('feedback-banner');
+        banner.style.opacity = '0';
+        banner.innerHTML = '';
+
+        const imgElem = document.getElementById('character-image');
+        const fallbackBadge = document.getElementById('image-fallback-badge');
+        fallbackBadge.classList.add('hidden');
+        imgElem.style.display = 'block';
+        imgElem.src = currentItem.image;
+
+        // 同一難易度から正解以外の3名をダミーとして自動選定
+        const others = shuffleArray(currentPool.filter(c => c.name !== currentItem.name)).slice(0, 3).map(c => c.name);
+        const choices = shuffleArray([currentItem.name, ...others]);
+
+        const container = document.getElementById('choices-container');
+        container.innerHTML = '';
+
+        choices.forEach((choice, index) => {
+            const btn = document.createElement('button');
+            btn.className = `choice-btn w-full p-4 rounded-xl border border-slate-700 bg-slate-800/90 text-left font-bold text-sm sm:text-base text-gray-200 flex items-center justify-between group`;
+            btn.innerHTML = `
+                <span class="flex items-center gap-3">
+                    <span class="font-orbitron text-xs text-cyan-400/80 group-hover:text-cyan-300 bg-slate-900 px-2 py-1 rounded">0${index + 1}</span>
+                    <span>${choice}</span>
+                </span>
+                <i class="fa-regular fa-circle-dot text-gray-500 group-hover:text-cyan-300 transition text-xs"></i>
+            `;
+            btn.onclick = () => handleChoiceClick(choice, btn, currentItem.name);
+            container.appendChild(btn);
+        });
+    }
+
+    function handleChoiceClick(selectedAnswer, clickedBtn, correctAnswer) {
+        if (isAnswerLocked) return;
+        isAnswerLocked = true;
+
+        const banner = document.getElementById('feedback-banner');
+        const allButtons = document.querySelectorAll('.choice-btn');
+        allButtons.forEach(btn => btn.disabled = true);
+
+        if (selectedAnswer === correctAnswer) {
+            score++;
+            document.getElementById('current-score').innerText = score;
+            clickedBtn.classList.add('btn-correct');
+            banner.innerHTML = `<span class="text-green-400 flex items-center gap-2"><i class="fa-solid fa-circle-check"></i> 正解！ フォースが共にある！</span>`;
+        } else {
+            clickedBtn.classList.add('btn-wrong');
+            allButtons.forEach(btn => {
+                if (btn.innerText.includes(correctAnswer)) {
+                    btn.classList.add('btn-correct');
+                }
+            });
+            banner.innerHTML = `<span class="text-red-400 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i> 不正解... 正解は「${correctAnswer}」</span>`;
+        }
+
+        banner.style.opacity = '1';
+
+        setTimeout(() => {
+            currentIndex++;
+            if (currentIndex < currentQuestions.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }, 1300);
+    }
+
+    function showResults() {
+        document.getElementById('screen-quiz').classList.add('hidden');
+        document.getElementById('screen-result').classList.remove('hidden');
+
+        const total = currentQuestions.length;
+        const accuracy = Math.round((score / total) * 100);
+
+        document.getElementById('result-score').innerText = `${score} / ${total}`;
+        document.getElementById('result-accuracy').innerText = `${accuracy}%`;
+
+        const rankTitle = document.getElementById('rank-title');
+        const rankDesc = document.getElementById('rank-desc');
+        const rankIcon = document.getElementById('rank-icon');
+        const rankIconBox = document.getElementById('rank-icon-box');
+
+        if (score === total) {
+            rankTitle.innerText = "グランド・マスター";
+            rankDesc.innerText = "完璧な正解率！銀河中のあらゆるキャラクターを知り尽くした真のジェダイ・マスターです。";
+            rankIcon.className = "fa-solid fa-crown text-yellow-300";
+            rankIconBox.className = "w-20 h-20 rounded-full mx-auto flex items-center justify-center text-3xl bg-yellow-950/60 border-2 border-yellow-400 shadow-lg shadow-yellow-500/30";
+        } else if (score >= total * 0.7) {
+            rankTitle.innerText = "ジェダイ・ナイト";
+            rankDesc.innerText = "フォースとの強いつながりを感じます。多くの星系で頼りにされる存在です。";
+            rankIcon.className = "fa-solid fa-shield-halved text-cyan-300";
+            rankIconBox.className = "w-20 h-20 rounded-full mx-auto flex items-center justify-center text-3xl bg-cyan-950/60 border-2 border-cyan-400 shadow-lg shadow-cyan-500/30";
+        } else if (score >= total * 0.4) {
+            rankTitle.innerText = "パダワン";
+            rankDesc.innerText = "まだ修行中の身ですが、見込みがあります。さらに訓練を重ねましょう！";
+            rankIcon.className = "fa-solid fa-wand-magic-sparkles text-amber-400";
+            rankIconBox.className = "w-20 h-20 rounded-full mx-auto flex items-center justify-center text-3xl bg-slate-800 border-2 border-amber-500";
+        } else {
+            rankTitle.innerText = "ヤングリング";
+            rankDesc.innerText = "銀河の歴史は広大です。アーカイブ室でじっくり復習して再挑戦しましょう！";
+            rankIcon.className = "fa-solid fa-seedling text-emerald-400";
+            rankIconBox.className = "w-20 h-20 rounded-full mx-auto flex items-center justify-center text-3xl bg-slate-800 border-2 border-emerald-500";
+        }
+    }
+
+    function restartQuiz() {
+        startQuiz();
+    }
+
+    function backToTitle() {
+        document.getElementById('screen-result').classList.add('hidden');
+        document.getElementById('screen-quiz').classList.add('hidden');
+        document.getElementById('screen-title').classList.remove('hidden');
+        document.getElementById('header-difficulty-badge').classList.add('hidden');
+    }
+
+    function handleImageError(img) {
+        img.style.display = 'none';
+        const fallbackBadge = document.getElementById('image-fallback-badge');
+        const fallbackName = document.getElementById('fallback-target-name');
+        fallbackBadge.classList.remove('hidden');
+        if (currentQuestions[currentIndex]) {
+            fallbackName.innerText = `ファイル: ${currentQuestions[currentIndex].image}`;
+        }
+    }
+
+    function shuffleArray(arr) {
+        const copy = [...arr];
+        for (let i = copy.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [copy[i], copy[j]] = [copy[j], copy[i]];
+        }
+        return copy;
+    }
+    </script>
+</body>
+</html>
